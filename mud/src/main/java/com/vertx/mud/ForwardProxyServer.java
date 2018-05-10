@@ -1,6 +1,10 @@
 package com.vertx.mud;
 
+import java.util.HashMap;
+
 import io.vertx.core.AbstractVerticle;
+import io.vertx.core.buffer.Buffer;
+import io.vertx.core.eventbus.EventBus;
 import io.vertx.core.logging.Logger;
 import io.vertx.core.logging.LoggerFactory;
 import io.vertx.core.net.NetClient;
@@ -11,66 +15,104 @@ public class ForwardProxyServer extends AbstractVerticle {
 
 	private static final Logger logger = LoggerFactory.getLogger(ForwardProxyServer.class);
 
-	private final int port = 3306;
-	private final String mysqlHost = "10.10.0.6";
+	private int port = 3306;
+	private String hostname = "10.10.0.6";
+	NetServer netServer;
+	EventBus eventBus;
+	HashMap<String, SocketBag> hashMap;
+
+	class SocketBag {
+		public NetSocket incomingSocket;
+		public NetSocket outgoingSocket;
+		public int ID;
+
+		private void close() {
+			incomingSocket.close();
+			outgoingSocket.close();
+		}
+	}
+
+	int SID;
+	int LocalPort;
+	// forward format: localport:hostname:port : 6666:ttc.ca:80
+	public void setup(String forwardTo) throws Exception {
+		String[] arr = forwardTo.split(":");
+		LocalPort = Integer.parseInt(arr[0]);
+		port = Integer.parseInt(arr[2]);
+		hostname = arr[1];
+
+	
+	}
 
 	@Override
 	public void start() throws Exception {
-		NetServer netServer = vertx.createNetServer();// 创建代理服务器
-		NetClient netClient = vertx.createNetClient();// 创建连接mysql客户端
-		netServer.connectHandler(socket -> netClient.connect(port, mysqlHost, result -> {
-			// 响应来自客户端的连接请求，成功之后，在建立一个与目标mysql服务器的连接
-			if (result.succeeded()) {
-				// 与目标mysql服务器成功连接连接之后，创造一个MysqlProxyConnection对象,并执行代理方法
-				new MysqlProxyConnection(socket, result.result()).proxy();
-			} else {
-				logger.error(result.cause().getMessage(), result.cause());
-				socket.close();
-			}
-		})).listen(port, listenResult -> {// 代理服务器的监听端口
+		netServer = vertx.createNetServer();// 创建代理服务器
+		
+		SID = 0;
+		eventBus = vertx.eventBus();
+		hashMap = new HashMap<>();
+		
+		netServer.connectHandler(incomingSocket -> {
+			logger.info(" incoming socket");
+
+			NetClient netClient = vertx.createNetClient();
+			netClient.connect(port, hostname, result -> {
+				if (result.succeeded()) {
+					SID++;
+					SocketBag sb = new SocketBag();
+					String Key = "K" + SID;
+
+					String KeyCtoS = Key + "CS";
+					String KeyStoC = Key + "SC";
+
+					hashMap.put(Key, sb);
+					sb.incomingSocket = incomingSocket;
+					sb.outgoingSocket = result.result();
+
+					eventBus.consumer(KeyCtoS, msg -> {
+						Buffer bf = (Buffer) msg.body();
+						logger.info(String.format("get %s %d",  KeyCtoS,bf.length() ));
+						sb.outgoingSocket.write(bf);
+					});
+
+					eventBus.consumer(KeyStoC, msg -> {
+						Buffer bf = (Buffer) msg.body();
+						logger.info(String.format("get %s %d",  KeyStoC, bf.length()));
+						sb.incomingSocket.write(bf);
+					});
+
+					
+					
+					sb.incomingSocket.handler(buff -> {
+						Buffer bf = buff;
+						logger.info(String.format("sent %s %d",  KeyCtoS, bf.length()));
+						eventBus.send(KeyCtoS, bf);
+
+					});
+
+					sb.outgoingSocket.handler(buff -> {
+						Buffer bf = buff;
+						logger.info(String.format("sent %s %d",  KeyStoC, bf.length()));
+						eventBus.send(KeyStoC, bf);
+					});
+				}
+			});
+
+		});
+
+		
+		netServer.listen(LocalPort, listenResult -> {
 			if (listenResult.succeeded()) {
-				// 成功启动代理服务器
-				logger.info("Mysql proxy server start up.");
+				logger.info(" proxy server start up.");
+				
+				
+				
+				
 			} else {
-				// 启动代理服务器失败
-				logger.error("Mysql proxy exit. because: " + listenResult.cause().getMessage(), listenResult.cause());
-				System.exit(1);
+				logger.error(" proxy exit. because: " + listenResult.cause().getMessage(), listenResult.cause());
+				netServer = null;
 			}
 		});
-	}
 
-	public static class MysqlProxyConnection {
-		private final NetSocket clientSocket;
-		private final NetSocket serverSocket;
-
-		public MysqlProxyConnection(NetSocket clientSocket, NetSocket serverSocket) {
-			this.clientSocket = clientSocket;
-			this.serverSocket = serverSocket;
-		}
-
-		private void proxy() {
-			// 当代理与mysql服务器连接关闭时，关闭client与代理的连接
-			serverSocket.closeHandler(v -> clientSocket.close());
-			// 反之亦然
-			clientSocket.closeHandler(v -> serverSocket.close());
-			// 不管那端的连接出现异常时，关闭两端的连接
-			serverSocket.exceptionHandler(e -> {
-				logger.error(e.getMessage(), e);
-				close();
-			});
-			clientSocket.exceptionHandler(e -> {
-				logger.error(e.getMessage(), e);
-				close();
-			});
-			// 当收到来自客户端的数据包时，转发给mysql目标服务器
-			clientSocket.handler(buffer -> serverSocket.write(buffer));
-			// 当收到来自mysql目标服务器的数据包时，转发给客户端
-			serverSocket.handler(buffer -> clientSocket.write(buffer));
-		}
-
-		private void close() {
-			clientSocket.close();
-			serverSocket.close();
-		}
 	}
 }
