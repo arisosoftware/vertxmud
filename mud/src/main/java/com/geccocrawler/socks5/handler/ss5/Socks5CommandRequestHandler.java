@@ -79,18 +79,17 @@ public class Socks5CommandRequestHandler extends SimpleChannelInboundHandler<Def
 
 		@Override
 		public void channelRead(ChannelHandlerContext ctx2, Object destMsg) throws Exception {
-			logger.info("将目标服务器信息转发给客户端");
+
 			clientChannelContext.writeAndFlush(destMsg);
 		}
 
 		@Override
 		public void channelInactive(ChannelHandlerContext ctx2) throws Exception {
-			logger.info("目标服务器断开连接");
+
 			clientChannelContext.channel().close();
 		}
 	}
 
- 
 	private static class Client2DestHandler extends ChannelInboundHandlerAdapter {
 
 		private ChannelFuture destChannelFuture;
@@ -101,13 +100,13 @@ public class Socks5CommandRequestHandler extends SimpleChannelInboundHandler<Def
 
 		@Override
 		public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-			logger.info("将客户端的消息转发给目标服务器端");
+
 			destChannelFuture.channel().writeAndFlush(msg);
 		}
 
 		@Override
 		public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-			logger.info("客户端断开连接");
+
 			destChannelFuture.channel().close();
 		}
 	}

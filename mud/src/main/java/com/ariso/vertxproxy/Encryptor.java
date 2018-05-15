@@ -11,110 +11,56 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
+import org.apache.shiro.codec.Hex;
 import org.apache.sshd.common.util.Base64;
 
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.buffer.impl.BufferFactoryImpl;
+import io.vertx.core.buffer.impl.BufferImpl;
+import io.vertx.core.spi.BufferFactory;
 
 public class Encryptor {
 
 	SecretKeySpec skey;
-	Cipher cipher;
-
+	Cipher encipher;
+	Cipher decipher;
 	public Encryptor(String Key) throws Exception {
 		KeyGenerator kgen = KeyGenerator.getInstance("AES");
 		kgen.init(128, new SecureRandom(Key.getBytes()));
 		SecretKey secretKey = kgen.generateKey();
 		byte[] enCodeFormat = secretKey.getEncoded();
 		skey = new SecretKeySpec(enCodeFormat, "AES");
-		cipher = Cipher.getInstance("AES");
+		encipher = Cipher.getInstance("AES");
+		decipher = Cipher.getInstance("AES");
+		encipher.init(Cipher.ENCRYPT_MODE, skey);
+		decipher.init(Cipher.DECRYPT_MODE, skey);
 	}
 
 	public void ConvertToEncrpyt(Buffer bf) throws Exception {
-		cipher.init(Cipher.ENCRYPT_MODE, skey);
-		bf.setBytes(0, cipher.doFinal(bf.getBytes()));
+		
+		bf.setBytes(0, encipher.doFinal(bf.getBytes()));
 	}
 
 	public void ConvertToDecrpyt(Buffer bf) throws Exception {
-		cipher.init(Cipher.DECRYPT_MODE, skey);
-		bf.setBytes(0, cipher.doFinal(bf.getBytes()));
+	 
+		bf.setBytes(0, decipher.doFinal(bf.getBytes()));
 	}
-
-	public static String encrypt(String key, String initVector, String value) {
-		try {
-			IvParameterSpec iv = new IvParameterSpec(initVector.getBytes("UTF-8"));
-			SecretKeySpec skeySpec = new SecretKeySpec(key.getBytes("UTF-8"), "AES");
-
-			Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING");
-			cipher.init(Cipher.ENCRYPT_MODE, skeySpec, iv);
-
-			byte[] encrypted = cipher.doFinal(value.getBytes());
-
-			return Base64.encodeToString(encrypted);
-		} catch (Exception ex) {
-			ex.printStackTrace();
-		}
-
-		return null;
-	}
-
-	public static byte[] decryptA(byte[] content, String password) {
-		try {
-			KeyGenerator kgen = KeyGenerator.getInstance("AES");
-			kgen.init(128, new SecureRandom(password.getBytes()));
-			SecretKey secretKey = kgen.generateKey();
-			byte[] enCodeFormat = secretKey.getEncoded();
-			SecretKeySpec key = new SecretKeySpec(enCodeFormat, "AES");
-			Cipher cipher = Cipher.getInstance("AES");
-			cipher.init(Cipher.DECRYPT_MODE, key);
-			byte[] result = cipher.doFinal(content);
-			return result;
-
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		return null;
-	}
-
-	public static byte[] encryptA(String content, String password) {
-		try {
-			KeyGenerator kgen = KeyGenerator.getInstance("AES");
-			kgen.init(128, new SecureRandom(password.getBytes()));
-			SecretKey secretKey = kgen.generateKey();
-			byte[] enCodeFormat = secretKey.getEncoded();
-			SecretKeySpec key = new SecretKeySpec(enCodeFormat, "AES");
-			Cipher cipher = Cipher.getInstance("AES");
-			byte[] byteContent = content.getBytes("utf-8");
-			cipher.init(Cipher.ENCRYPT_MODE, key);
-			byte[] result = cipher.doFinal(byteContent);
-			return result;
-		} catch (Exception ex) {
-			ex.printStackTrace();
-		}
-		return null;
-	}
-
-	public static String decrypt(String key, String initVector, String encrypted) {
-		try {
-			IvParameterSpec iv = new IvParameterSpec(initVector.getBytes("UTF-8"));
-			SecretKeySpec skeySpec = new SecretKeySpec(key.getBytes("UTF-8"), "AES");
-
-			Cipher cipher = Cipher.getInstance("AES/CBC/PKCS5PADDING");
-			cipher.init(Cipher.DECRYPT_MODE, skeySpec, iv);
-
-			byte[] original = cipher.doFinal(Base64.decodeString(encrypted));
-
-			return new String(original);
-		} catch (Exception ex) {
-			ex.printStackTrace();
-		}
-
-		return null;
-	}
-
-	public static void main(String[] args) {
-		String key = "Bar12345Bar12345"; // 128 bit key
-		String initVector = "RandomInitVector"; // 16 bytes IV
-
-		System.out.println(decrypt(key, initVector, encrypt(key, initVector, "Hello World")));
+	
+//	public void debugHex(Buffer bf)
+//	{
+//		 Hex.encodeToString(bf.getBytes());
+//	}
+ 
+	public static void main(String[] args) throws Exception {
+		String key = "Bar12345Bar12345";  
+	 
+		Encryptor aes = new Encryptor(key);
+		Buffer bf =    Buffer.buffer("Hello World");
+		System.out.println("Init           :"+Hex.encodeToString(bf.getBytes()));
+		aes.ConvertToEncrpyt(bf);
+		System.out.println("ConvertToEncrpyt:"+Hex.encodeToString(bf.getBytes()));
+		aes.ConvertToDecrpyt(bf);
+		System.out.println("ConvertToDecrpyt:"+Hex.encodeToString(bf.getBytes()));
+		 
 	}
 }
