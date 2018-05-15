@@ -32,7 +32,7 @@ public class Socks5CommandRequestHandler extends SimpleChannelInboundHandler<Def
 	@Override
 	protected void channelRead0(final ChannelHandlerContext clientChannelContext, DefaultSocks5CommandRequest msg)
 			throws Exception {
-		logger.debug(String.format("Open remote ~ %s://%s:%d", msg.type(), msg.dstAddr(), msg.dstPort()));
+		logger.info(String.format("Open remote ~ %s://%s:%d", msg.type(), msg.dstAddr(), msg.dstPort()));
 
 		if (msg.type().equals(Socks5CommandType.CONNECT)) {
 
@@ -79,23 +79,18 @@ public class Socks5CommandRequestHandler extends SimpleChannelInboundHandler<Def
 
 		@Override
 		public void channelRead(ChannelHandlerContext ctx2, Object destMsg) throws Exception {
-			logger.trace("将目标服务器信息转发给客户端");
+			logger.info("将目标服务器信息转发给客户端");
 			clientChannelContext.writeAndFlush(destMsg);
 		}
 
 		@Override
 		public void channelInactive(ChannelHandlerContext ctx2) throws Exception {
-			logger.trace("目标服务器断开连接");
+			logger.info("目标服务器断开连接");
 			clientChannelContext.channel().close();
 		}
 	}
 
-	/**
-	 * 将客户端的消息转发给目标服务器端
-	 * 
-	 * @author huchengyi
-	 *
-	 */
+ 
 	private static class Client2DestHandler extends ChannelInboundHandlerAdapter {
 
 		private ChannelFuture destChannelFuture;
@@ -106,13 +101,13 @@ public class Socks5CommandRequestHandler extends SimpleChannelInboundHandler<Def
 
 		@Override
 		public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-			logger.trace("将客户端的消息转发给目标服务器端");
+			logger.info("将客户端的消息转发给目标服务器端");
 			destChannelFuture.channel().writeAndFlush(msg);
 		}
 
 		@Override
 		public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-			logger.trace("客户端断开连接");
+			logger.info("客户端断开连接");
 			destChannelFuture.channel().close();
 		}
 	}

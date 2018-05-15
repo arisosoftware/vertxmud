@@ -66,7 +66,7 @@ public class ProxyServer {
 					});
 
 			ChannelFuture future = bootstrap.bind(port).sync();
-			logger.debug("bind port : " + port);
+			logger.info("proxy bind port : " + port);
 			future.channel().closeFuture().sync();
 		} finally {
 			boss.shutdownGracefully();

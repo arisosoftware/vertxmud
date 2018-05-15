@@ -25,6 +25,8 @@ public class WrapSocketForwarder extends AbstractVerticle {
 
 	int EncryptModel = 0;
 
+	String ID;
+
 	// forward format: localport:hostname:port:encryptModel : 6666:remoteSocket:80:0
 	// 9501:127.0.0.1:9502:0 ~ 0 for encrypt 9502 is wrapper server port
 	// 9502:127.0.0.1:9503:1 ~ 1 for decrypt, 9503 is socket 5 proxy port
@@ -34,6 +36,7 @@ public class WrapSocketForwarder extends AbstractVerticle {
 		port = Integer.parseInt(arr[2]);
 		hostname = arr[1];
 		EncryptModel = Integer.parseInt(arr[3]);
+		ID = arr[4];
 	}
 
 	@Override
@@ -43,7 +46,7 @@ public class WrapSocketForwarder extends AbstractVerticle {
 		Encryptor crypt = new Encryptor("111111");
 
 		netServer.connectHandler(incomingSocket -> {
-			logger.info("accept new incoming socket");
+			logger.info(String.format("%s incoming ", ID));
 
 			NetClient netClient = vertx.createNetClient();
 			// connect to outgoing socket
@@ -54,7 +57,7 @@ public class WrapSocketForwarder extends AbstractVerticle {
 
 					incomingSocket.handler(buff -> {
 						Buffer bf = buff;
-						logger.info(String.format("sent C-S %d", bf.length()));
+						logger.info(String.format("%s sent C-S %d", ID, bf.length()));
 						try {
 							crypt.ConvertToEncrpyt(bf);
 							outgoingSocket.write(bf);
@@ -67,7 +70,7 @@ public class WrapSocketForwarder extends AbstractVerticle {
 
 					outgoingSocket.handler(buff -> {
 						Buffer bf = buff;
-						logger.info(String.format("sent S-C %d", bf.length()));
+						logger.info(String.format("%s sent S-C %d", ID, bf.length()));
 
 						try {
 							crypt.ConvertToDecrpyt(bf);
@@ -96,10 +99,10 @@ public class WrapSocketForwarder extends AbstractVerticle {
 
 		netServer.listen(LocalPort, listenResult -> {
 			if (listenResult.succeeded()) {
-				logger.info(" proxy server start up.");
+				logger.info(ID + " proxy server start up.");
 
 			} else {
-				logger.error(" proxy exit. because: " + listenResult.cause().getMessage(), listenResult.cause());
+				logger.error(ID + " proxy exit. because: " + listenResult.cause().getMessage(), listenResult.cause());
 				netServer = null;
 			}
 		});
