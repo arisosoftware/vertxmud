@@ -115,6 +115,12 @@ public class Encryptor {
 		String key = "Bar12345Bar12345"; // 128 bit key
 		String initVector = "RandomInitVector"; // 16 bytes IV
 
-		System.out.println(decrypt(key, initVector, encrypt(key, initVector, "Hello World")));
+		String source = "Hello world";
+		String encryptstr = encrypt(key, initVector, source);
+		String cleartext = decrypt(key, initVector, encryptstr);
+		
+		 System.out.println(source);
+		 System.out.println(encryptstr);
+		 System.out.println(cleartext);
 	}
 }
