@@ -3,8 +3,6 @@ package com.geccocrawler.socks5.handler.ss5;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.geccocrawler.socks5.ProxyServer;
-
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.socksx.SocksVersion;
@@ -17,10 +15,8 @@ public class Socks5InitialRequestHandler extends SimpleChannelInboundHandler<Def
 
 	private static final Logger logger = LoggerFactory.getLogger(Socks5InitialRequestHandler.class);
 
-	private ProxyServer proxyServer;
+	public Socks5InitialRequestHandler() {
 
-	public Socks5InitialRequestHandler(ProxyServer proxyServer) {
-		this.proxyServer = proxyServer;
 	}
 
 	@Override
@@ -31,13 +27,10 @@ public class Socks5InitialRequestHandler extends SimpleChannelInboundHandler<Def
 			ctx.fireChannelRead(msg);
 		} else {
 			if (msg.version().equals(SocksVersion.SOCKS5)) {
-				if (proxyServer.isAuth()) {
-					Socks5InitialResponse initialResponse = new DefaultSocks5InitialResponse(Socks5AuthMethod.PASSWORD);
-					ctx.writeAndFlush(initialResponse);
-				} else {
-					Socks5InitialResponse initialResponse = new DefaultSocks5InitialResponse(Socks5AuthMethod.NO_AUTH);
-					ctx.writeAndFlush(initialResponse);
-				}
+
+				Socks5InitialResponse initialResponse = new DefaultSocks5InitialResponse(Socks5AuthMethod.NO_AUTH);
+				ctx.writeAndFlush(initialResponse);
+
 			}
 		}
 	}
