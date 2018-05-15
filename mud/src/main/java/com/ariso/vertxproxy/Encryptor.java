@@ -52,7 +52,7 @@ public class Encryptor {
 	public Buffer ConvertToDecrpyt(Buffer bf) throws Exception {
 		int buflen = bf.getInt(0);
 
-		byte[] buf = decipher.doFinal(bf.getBytes(4, bf.length()));
+		byte[] buf = decipher.doFinal(bf.getBytes());
 		Buffer result = Buffer.buffer();
 		result.setBytes(0, buf, 0, buflen);
 		return result;
