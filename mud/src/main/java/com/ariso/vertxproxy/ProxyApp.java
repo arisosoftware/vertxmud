@@ -4,10 +4,16 @@ import com.geccocrawler.socks5.ProxyServer;
 import com.vertx.mud.ForwardProxyServer;
 
 import io.vertx.core.Vertx;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
 
 public class ProxyApp {
 
+	private static final Logger logger = LoggerFactory.getLogger(ProxyApp.class);
+
+	
 	public static void main(String[] args) throws Exception {
+		
 		TestPath02();
 	}
 
@@ -19,7 +25,7 @@ public class ProxyApp {
 		vertx.deployVerticle(w1);
 
 		WrapSocketForwarder w2 = new WrapSocketForwarder();
-		w2.setup("9502:127.0.0.1:9503:1:W002");
+		w2.setup("9502:127.0.0.1:9503:0:W002");
 		vertx.deployVerticle(w2);
 
 		ProxyServer.create(9503).start();
@@ -35,7 +41,7 @@ public class ProxyApp {
 		vertx.deployVerticle(w1);
 
 		WrapSocketForwarder w2 = new WrapSocketForwarder();
-		w2.setup("9502:127.0.0.1:9901:1:W002");
+		w2.setup("9502:127.0.0.1:9901:0:W002");
 		vertx.deployVerticle(w2);
 
 	}

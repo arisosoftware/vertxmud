@@ -2,6 +2,8 @@ package com.ariso.vertxproxy;
 
 import java.util.HashMap;
 
+import org.apache.sshd.common.util.Base64;
+
 import com.vertx.mud.ForwardProxyServer;
 
 import io.vertx.core.AbstractVerticle;
@@ -23,7 +25,7 @@ public class WrapSocketForwarder extends AbstractVerticle {
 
 	int LocalPort;
 
-	int EncryptModel = 0;
+	int EncryptModel = 0; // 0 : no encrypt, 1 encrypt then decrypt , 2: decrypt then encrypt
 
 	String ID;
 
@@ -39,10 +41,18 @@ public class WrapSocketForwarder extends AbstractVerticle {
 		ID = arr[4];
 	}
 
+	String PrintSetupInfo()
+	{
+		return String.format("Listen:%d target:%s:%d Encrypt:%d ID:%s", 
+				LocalPort, hostname, port, EncryptModel, ID
+				
+				);
+	}
+	
 	@Override
 	public void start() throws Exception {
-		netServer = vertx.createNetServer();// 创建代理服务器
-
+		netServer = vertx.createNetServer(); 
+		
 		Encryptor crypt = new Encryptor("111111");
 
 		netServer.connectHandler(incomingSocket -> {
@@ -55,12 +65,17 @@ public class WrapSocketForwarder extends AbstractVerticle {
 
 					NetSocket outgoingSocket = result.result();
 
-					incomingSocket.handler(buff -> {
-						Buffer bf = buff;
+					incomingSocket.handler(bf -> {
+					 
 						logger.info(String.format("%s sent C-S %d", ID, bf.length()));
 						try {
-							crypt.ConvertToEncrpyt(bf);
-							outgoingSocket.write(bf);
+						  if ( this.EncryptModel==1)
+							bf = crypt.ConvertToEncrpyt(bf);
+						  else if (this.EncryptModel==2)
+							  bf = crypt.ConvertToDecrpyt(bf);
+					
+						  logger.info(Base64.encodeToString(bf.getBytes()));
+						  outgoingSocket.write(bf);
 						} catch (Exception e) {
 							e.printStackTrace();
 							outgoingSocket.close();
@@ -68,12 +83,17 @@ public class WrapSocketForwarder extends AbstractVerticle {
 						}
 					});
 
-					outgoingSocket.handler(buff -> {
-						Buffer bf = buff;
+					outgoingSocket.handler(bf -> {
+					 
 						logger.info(String.format("%s sent S-C %d", ID, bf.length()));
 
 						try {
-							crypt.ConvertToDecrpyt(bf);
+							
+							if ( this.EncryptModel==2)
+								bf = crypt.ConvertToEncrpyt(bf);
+							  else if (this.EncryptModel==1)
+								  bf = crypt.ConvertToDecrpyt(bf);
+							logger.info(Base64.encodeToString(bf.getBytes()));
 							incomingSocket.write(bf);
 						} catch (Exception e) {
 							e.printStackTrace();
@@ -99,10 +119,10 @@ public class WrapSocketForwarder extends AbstractVerticle {
 
 		netServer.listen(LocalPort, listenResult -> {
 			if (listenResult.succeeded()) {
-				logger.info(ID + " proxy server start up.");
+				logger.info( PrintSetupInfo()+" Start up!");
 
 			} else {
-				logger.error(ID + " proxy exit. because: " + listenResult.cause().getMessage(), listenResult.cause());
+				logger.error( PrintSetupInfo() + " proxy exit. because: " + listenResult.cause().getMessage(), listenResult.cause());
 				netServer = null;
 			}
 		});
