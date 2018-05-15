@@ -14,8 +14,6 @@ import io.vertx.ext.shell.term.TelnetTermOptions;
  */
 public class CommandCenter extends AbstractVerticle {
 
-	 
-
 	@Override
 	public void start() throws Exception {
 

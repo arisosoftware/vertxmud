@@ -34,6 +34,7 @@ public class ForwardProxyServer extends AbstractVerticle {
 
 	int SID;
 	int LocalPort;
+
 	// forward format: localport:hostname:port : 6666:ttc.ca:80
 	public void setup(String forwardTo) throws Exception {
 		String[] arr = forwardTo.split(":");
@@ -41,17 +42,16 @@ public class ForwardProxyServer extends AbstractVerticle {
 		port = Integer.parseInt(arr[2]);
 		hostname = arr[1];
 
-	
 	}
 
 	@Override
 	public void start() throws Exception {
 		netServer = vertx.createNetServer();// 创建代理服务器
-		
+
 		SID = 0;
 		eventBus = vertx.eventBus();
 		hashMap = new HashMap<>();
-		
+
 		netServer.connectHandler(incomingSocket -> {
 			logger.info(" incoming socket");
 
@@ -71,28 +71,26 @@ public class ForwardProxyServer extends AbstractVerticle {
 
 					eventBus.consumer(KeyCtoS, msg -> {
 						Buffer bf = (Buffer) msg.body();
-						logger.info(String.format("get %s %d",  KeyCtoS,bf.length() ));
+						logger.info(String.format("get %s %d", KeyCtoS, bf.length()));
 						sb.outgoingSocket.write(bf);
 					});
 
 					eventBus.consumer(KeyStoC, msg -> {
 						Buffer bf = (Buffer) msg.body();
-						logger.info(String.format("get %s %d",  KeyStoC, bf.length()));
+						logger.info(String.format("get %s %d", KeyStoC, bf.length()));
 						sb.incomingSocket.write(bf);
 					});
 
-					
-					
 					sb.incomingSocket.handler(buff -> {
 						Buffer bf = buff;
-						logger.info(String.format("sent %s %d",  KeyCtoS, bf.length()));
+						logger.info(String.format("sent %s %d", KeyCtoS, bf.length()));
 						eventBus.send(KeyCtoS, bf);
 
 					});
 
 					sb.outgoingSocket.handler(buff -> {
 						Buffer bf = buff;
-						logger.info(String.format("sent %s %d",  KeyStoC, bf.length()));
+						logger.info(String.format("sent %s %d", KeyStoC, bf.length()));
 						eventBus.send(KeyStoC, bf);
 					});
 				}
@@ -100,14 +98,10 @@ public class ForwardProxyServer extends AbstractVerticle {
 
 		});
 
-		
 		netServer.listen(LocalPort, listenResult -> {
 			if (listenResult.succeeded()) {
 				logger.info(" proxy server start up.");
-				
-				
-				
-				
+
 			} else {
 				logger.error(" proxy exit. because: " + listenResult.cause().getMessage(), listenResult.cause());
 				netServer = null;

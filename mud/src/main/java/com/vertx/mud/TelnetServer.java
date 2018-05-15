@@ -13,12 +13,10 @@ public class TelnetServer extends AbstractVerticle {
 
 	static int SessionIdGenerator = 0;
 
-	
-	
 	@Override
 	public void start() throws Exception {
 		EventBus eb = vertx.eventBus();
-		
+
 		NetServer netserver = vertx.createNetServer();
 
 		netserver.connectHandler(new Handler<NetSocket>() {
@@ -36,7 +34,6 @@ public class TelnetServer extends AbstractVerticle {
 					@Override
 					public void handle(Buffer inBuffer) {
 
-						
 						// inBuffer keep the incoming data
 						// create outBuffer for writing back
 
@@ -44,9 +41,7 @@ public class TelnetServer extends AbstractVerticle {
 
 						// send message to receiver
 						//
-						
-						
-						
+
 						Buffer outBuffer = Buffer.buffer();
 						// outBuffer.appendString("response...");
 
